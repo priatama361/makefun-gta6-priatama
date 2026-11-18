@@ -23,6 +23,13 @@ node serve.ts
 Then open http://localhost:8080 in a desktop browser. No build step, no install and no
 network request: every asset is generated locally by the game's own modules.
 
+To package the recorded build and its dossier, run the entrypoint against a local
+output directory:
+
+```bash
+mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+```
+
 ## Controls
 
 | Action | Keys |
@@ -48,6 +55,7 @@ network request: every asset is generated locally by the game's own modules.
 - Combat with muzzle flashes, sparks, smoke, screen shake and synthesized sound cues.
 - High-contrast minimap, wanted stars, mission compass, health, armor, ammo and speedometer.
 - Start screen, pause screen, busted screen and persistent progress.
+- Seeded screenshot scenes (see `shots.json`) reproduce the four captures on demand.
 
 ## Screenshots
 

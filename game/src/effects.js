@@ -60,7 +60,8 @@ export function createEffects(state, random) {
       const part = state.particles[i];
       part.x += part.vx * dt;
       part.y += part.vy * dt;
-      const drag = part.kind === 'smoke' ? 1.6 : 3.2;
+      if (part.kind === 'spark') part.vy += 90 * dt;
+      const drag = part.kind === 'smoke' ? 1.5 : 3.0;
       part.vx *= Math.max(0, 1 - dt * drag);
       part.vy *= Math.max(0, 1 - dt * drag);
       if (part.kind === 'smoke') part.size += dt * 12;

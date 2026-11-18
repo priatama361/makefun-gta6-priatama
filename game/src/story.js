@@ -44,7 +44,7 @@ export const MISSIONS = [
     id: 'harbor-handoff',
     title: 'HARBOR HANDOFF',
     contact: 'dana',
-    brief: 'A crate came in on the evening boat. Pick it up by the pier, then move it.',
+    brief: 'A crate came in on the evening boat. Pick it up by the pier, then move it across town before the sun drops.',
     reward: 2400,
     rep: 240,
     unlock: 'smg',

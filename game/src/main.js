@@ -15,7 +15,7 @@ import {
 import { createAudio } from './audio.js';
 import { stageShot } from './shots.js';
 
-const MAX_FRAME = 0.25;
+const MAX_FRAME = 0.2;
 const params = new URLSearchParams(window.location.search);
 const shot = params.get('shot');
 const seedParam = Number.parseInt(params.get('seed') ?? '', 10);
@@ -215,6 +215,7 @@ function runGame() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && screen === SCREEN_PLAY) {
       screen = SCREEN_PAUSED;
+      persist();
       announce('Paused.');
     }
   });

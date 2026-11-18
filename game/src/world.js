@@ -38,7 +38,7 @@ const FREE_CONTRACT = {
   title: 'STREET CONTRACT',
   contact: 'tito',
   brief: 'Keep the wheels turning until the next call comes in.',
-  reward: 1400,
+  reward: 1500,
   rep: 70,
   steps: [
     { kind: 'steal', label: 'FIND A CAR FOR THE RUN' },
@@ -107,7 +107,7 @@ export function createWorld(random, progress = {}) {
 
   function toast(text, color = PALETTE.text) {
     state.toast.text = text;
-    state.toast.timer = 3.6;
+    state.toast.timer = 4.0;
     state.toast.color = color;
   }
 

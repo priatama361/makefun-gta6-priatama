@@ -22,7 +22,7 @@ export const PLAYER = {
   sprint: 342,
   health: 100,
   armor: 0,
-  interactRange: 92,
+  interactRange: 96,
   cash: 400,
 };
 
@@ -102,7 +102,7 @@ export const PALETTE = {
   armor: '#3da8f2',
   text: '#fffdf2',
   muted: '#e9e3cc',
-  panel: 'rgba(16,30,44,0.90)',
+  panel: 'rgba(16,30,44,0.92)',
   panelLight: 'rgba(24,44,60,0.82)',
   orange: '#ff9642',
   shadow: 'rgba(48,46,34,0.22)',

@@ -5,7 +5,7 @@
 import { CITY, CITY_HEIGHT, CITY_WIDTH, PALETTE } from './config.js';
 import { pick } from './random.js';
 
-const BLOCK_INSET = CITY.road / 2 + 8;
+const BLOCK_INSET = CITY.road / 2 + 10;
 const BLOCK_SIZE = CITY.cell - CITY.road - 16;
 
 function districtAt(x, y) {
@@ -70,7 +70,7 @@ export function createCity(random) {
         for (const rect of splitShapes(random, x, y, BLOCK_SIZE)) {
           const building = makeBuilding(random, x + rect[0], y + rect[1], rect[2], rect[3], districtAt(x, y));
           buildings.push(building);
-          if (random() < 0.09 || buildings.length % 7 === 0) {
+          if (random() < 0.10 || buildings.length % 6 === 0) {
             building.shop = true;
             const door = { x: building.x + building.w / 2, y: building.y + building.h + 15, cooldown: 0 };
             shops.push(door);

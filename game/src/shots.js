@@ -4,9 +4,10 @@
 import { SCREEN_PLAY } from './render.js';
 
 const BEST = { cover: 12450, onfoot: 2860, combat: 6420, story: 12680 };
+const SCENES = ['cover', 'onfoot', 'combat', 'story'];
 
 export function stageShot(name, world) {
-  const scene = Object.hasOwn(BEST, name) ? name : 'cover';
+  const scene = SCENES.includes(name) ? name : 'cover';
   world.stage(scene);
-  return { screen: SCREEN_PLAY, best: BEST[scene] };
+  return { screen: SCREEN_PLAY, best: BEST[scene], scene };
 }

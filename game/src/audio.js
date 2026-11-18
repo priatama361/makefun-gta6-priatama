@@ -8,7 +8,7 @@ export function createAudio() {
   let engineGain = null;
   let noise = null;
   let muted = false;
-  const LEVEL = 0.36;
+  const LEVEL = 0.32;
 
   function unlock() {
     if (context !== null) {

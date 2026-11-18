@@ -420,12 +420,13 @@ export function createRenderer(canvas, world) {
       ctx.fillRect(-9, -w / 2 - 2, 18, w + 4);
       ctx.fillStyle = '#1d4d93';
       ctx.fillRect(-l * 0.34, -w / 2, l * 0.16, w);
-      const glow = car.siren ? PALETTE.copBlue : PALETTE.copRed;
+      const pulse = Math.floor(state.elapsed * 7) % 2 === 0;
+      const glow = pulse ? PALETTE.copBlue : PALETTE.copRed;
       ctx.shadowColor = glow;
       ctx.shadowBlur = 26;
       ctx.fillStyle = glow;
       ctx.fillRect(-8, -w / 2 - 4, 8, 8);
-      ctx.fillStyle = car.siren ? PALETTE.copRed : PALETTE.copBlue;
+      ctx.fillStyle = pulse ? PALETTE.copRed : PALETTE.copBlue;
       ctx.fillRect(0, -w / 2 - 4, 8, 8);
       ctx.shadowBlur = 0;
     }
@@ -620,7 +621,7 @@ export function createRenderer(canvas, world) {
 
   function drawLighting(state) {
     const warmth = 0.5 + 0.5 * Math.sin(state.timeOfDay * Math.PI * 2);
-    ctx.fillStyle = `rgba(255,199,112,${0.045 + warmth * 0.05})`;
+    ctx.fillStyle = `rgba(255,199,112,${0.04 + warmth * 0.055})`;
     ctx.fillRect(0, 0, FIELD.width, FIELD.height);
     const sun = ctx.createRadialGradient(FIELD.width * 0.82, FIELD.height * 0.12, 40, FIELD.width * 0.82, FIELD.height * 0.12, FIELD.width * 0.8);
     sun.addColorStop(0, 'rgba(255,246,196,0.30)');
@@ -893,7 +894,7 @@ export function createRenderer(canvas, world) {
     } else if (screen === SCREEN_OVER) {
       const s = state.stats;
       overlay('BUSTED', 'THE STREETS CAUGHT UP', [
-        `Mission  ${state.mission.def.title}        Cash  ${money(p.money)}`,
+        `Mission  ${state.mission.def.title}        Cash  ${money(state.player.money)}`,
         `Jobs done  ${s.jobs}        Total earned  ${money(s.earned)}`,
         `Best haul  ${money(Math.max(best, s.earned))}        Rank  ${state.rank.name}`,
       ], 'PRESS SPACE OR CLICK TO KEEP GOING', PALETTE.copRed);

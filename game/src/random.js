@@ -14,5 +14,6 @@ export function createRandom(seed) {
 // Pick one entry from a list without pulling in any array helper that could
 // hide the random call order from the deterministic staging code.
 export function pick(random, list) {
-  return list[Math.floor(random() * list.length) % list.length];
+  if (list.length === 0) return undefined;
+  return list[Math.floor(random() * list.length)];
 }

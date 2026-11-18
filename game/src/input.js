@@ -28,6 +28,7 @@ export function createInput(target) {
 
   window.addEventListener('blur', () => {
     held.clear();
+    presses.clear();
     pointer.down = false;
   });
 
@@ -52,6 +53,11 @@ export function createInput(target) {
       pointer.down = false;
       held.delete('Mouse0');
     }
+  });
+
+  target.addEventListener('pointercancel', () => {
+    pointer.down = false;
+    held.delete('Mouse0');
   });
 
   target.addEventListener('contextmenu', (event) => event.preventDefault());

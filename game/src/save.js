@@ -45,7 +45,10 @@ export function createSave(storage = window.localStorage) {
   }
 
   function commit(next) {
-    data = { ...data, ...next };
+    const merged = { ...data, ...next };
+    const changed = Object.keys(merged).some((key) => merged[key] !== data[key]);
+    data = merged;
+    if (!changed) return data;
     try {
       storage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch {
