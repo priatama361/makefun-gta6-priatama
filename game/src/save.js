@@ -1,71 +1,43 @@
-// Local persistence for money, reputation, rank progress and story position.
-// Storage can be disabled or full, so every access is guarded and the game
-// still runs with an in-memory copy when the browser refuses to save.
-
 import { SAVE_KEY } from './config.js';
 
-const BLANK = {
-  money: 400,
-  rep: 0,
-  completed: 0,
-  earned: 0,
-  missionsDone: 0,
-  best: 0,
-};
-
-function whole(value, fallback, low, high) {
-  const number = Math.floor(Number(value));
-  if (!Number.isFinite(number)) return fallback;
-  return Math.max(low, Math.min(high, number));
+export function freshProgress() {
+  return { money: 350, reputation: 0, missionIndex: 0, completed: 0, bestRank: 0, seenIntro: false };
 }
 
-export function createSave(storage = window.localStorage) {
-  let data = { ...BLANK };
-
-  function load() {
-    try {
-      const raw = storage.getItem(SAVE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-          data = {
-            money: whole(parsed.money, BLANK.money, 0, 999999999),
-            rep: whole(parsed.rep, 0, 0, 999999999),
-            completed: whole(parsed.completed, 0, 0, 99),
-            earned: whole(parsed.earned, 0, 0, 999999999),
-            missionsDone: whole(parsed.missionsDone, 0, 0, 99999),
-            best: whole(parsed.best, 0, 0, 999999999),
-          };
-        }
-      }
-    } catch {
-      data = { ...BLANK };
-    }
-    return data;
+export function loadProgress() {
+  const fallback = freshProgress();
+  try {
+    const raw = window.localStorage.getItem(SAVE_KEY);
+    if (raw === null) return fallback;
+    const parsed = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== 'object') return fallback;
+    return {
+      money: Number.isFinite(parsed.money) ? Math.max(0, Math.floor(parsed.money)) : fallback.money,
+      reputation: Number.isFinite(parsed.reputation) ? Math.max(0, Math.floor(parsed.reputation)) : 0,
+      missionIndex: Number.isInteger(parsed.missionIndex) ? Math.max(0, Math.min(6, parsed.missionIndex)) : 0,
+      completed: Number.isFinite(parsed.completed) ? Math.max(0, Math.floor(parsed.completed)) : 0,
+      bestRank: Number.isFinite(parsed.bestRank) ? Math.max(0, Math.floor(parsed.bestRank)) : 0,
+      seenIntro: parsed.seenIntro === true,
+    };
+  } catch {
+    return fallback;
   }
+}
 
-  function commit(next) {
-    const merged = { ...data, ...next };
-    const changed = Object.keys(merged).some((key) => merged[key] !== data[key]);
-    data = merged;
-    if (!changed) return data;
-    try {
-      storage.setItem(SAVE_KEY, JSON.stringify(data));
-    } catch {
-      // Progress stays in memory for this session when storage is unavailable.
-    }
-    return data;
+export function saveProgress(progress) {
+  try {
+    window.localStorage.setItem(SAVE_KEY, JSON.stringify(progress));
+  } catch {
+    return false;
   }
+  return true;
+}
 
-  function reset() {
-    data = { ...BLANK };
-    try {
-      storage.removeItem(SAVE_KEY);
-    } catch {
-      // Nothing else to do: the in-memory copy is already clean.
-    }
-    return data;
+export function clearProgress() {
+  try {
+    window.localStorage.removeItem(SAVE_KEY);
+  } catch {
+    return false;
   }
-
-  return { load, commit, reset, data: () => ({ ...data }) };
+  return true;
 }

@@ -1,6 +1,6 @@
 [
-  { "name": "1-cover.jpg", "query": "?shot=cover&seed=7", "label": "Daylight police pursuit at three stars" },
-  { "name": "2-onfoot.jpg", "query": "?shot=onfoot&seed=7", "label": "On-foot walk along the sunlit boardwalk" },
-  { "name": "3-combat.jpg", "query": "?shot=combat&seed=7", "label": "Street shootout against police" },
-  { "name": "4-story.jpg", "query": "?shot=story&seed=7", "label": "Story progression reward and rank" }
+  { "name": "1-cover.jpg", "query": "?shot=cover&seed=1" },
+  { "name": "2-onfoot.jpg", "query": "?shot=onfoot&seed=1" },
+  { "name": "3-combat.jpg", "query": "?shot=combat&seed=1" },
+  { "name": "4-story.jpg", "query": "?shot=story&seed=1" }
 ]

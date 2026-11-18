@@ -1,147 +1,230 @@
-// Procedural city layout for Solana Bay: pastel blocks, palm-lined beach,
-// turquoise harbor and a handful of named landmarks used by the story.
-// Generation is seeded so a screenshot seed always rebuilds the same streets.
-
-import { CITY, CITY_HEIGHT, CITY_WIDTH, PALETTE } from './config.js';
-import { pick } from './random.js';
-
-const BLOCK_INSET = CITY.road / 2 + 10;
-const BLOCK_SIZE = CITY.cell - CITY.road - 16;
-
-function districtAt(x, y) {
-  if (x > CITY.beachCol * CITY.cell - CITY.road) return 'BOARDWALK';
-  const row = y / CITY.cell;
-  if (row < 4) return 'UPTOWN';
-  if (row < 8) return 'PALM QUARTER';
-  return 'HARBORSIDE';
-}
-
-function makeBuilding(random, x, y, w, h, block) {
-  return {
-    x, y, w, h,
-    color: pick(random, PALETTE.building),
-    floors: 2 + Math.floor(random() * 8),
-    seed: Math.floor(random() * 100000),
-    top: random() < 0.22 ? 'sign' : random() < 0.42 ? 'tank' : 'plain',
-    sign: pick(random, ['SOLAR', 'CAFE', 'SUN 24', 'MOTEL', 'ARCADE', 'BAY FM', 'SURF', 'PIZZA']),
-    block,
-    shop: false,
-    landmark: null,
-  };
-}
-
-function splitShapes(random, x, y, size) {
-  const roll = random();
-  if (roll < 0.26) return [[0, 0, size, size]];
-  if (roll < 0.68) {
-    return [
-      [0, 0, size * 0.56, size],
-      [size * 0.6, 0, size * 0.4, size * 0.58],
-      [size * 0.6, size * 0.62, size * 0.4, size * 0.38],
-    ];
-  }
-  return [
-    [0, 0, size * 0.48, size * 0.48],
-    [size * 0.52, 0, size * 0.48, size * 0.48],
-    [0, size * 0.52, size * 0.48, size * 0.48],
-    [size * 0.52, size * 0.52, size * 0.48, size * 0.48],
-  ];
-}
+import { CAR, PALETTE, WORLD } from './config.js';
+import { pickOne, randomBetween, randomInt } from './random.js';
 
 export function createCity(random) {
+  const columns = Math.floor(WORLD.width / WORLD.pitch);
+  const rows = Math.floor(WORLD.height / WORLD.pitch);
   const buildings = [];
-  const trees = [];
-  const shops = [];
-  const blockStyles = [];
-  const landmarks = [];
+  const palms = [];
+  const parked = [];
+  const buildingGrid = new Map();
 
-  for (let i = 0; i < CITY.cols; i += 1) {
-    for (let j = 0; j < CITY.rows; j += 1) {
-      const x = i * CITY.cell + BLOCK_INSET;
-      const y = j * CITY.cell + BLOCK_INSET;
-      let style = 'buildings';
-      if (i >= CITY.beachCol + 1) style = 'water';
-      else if (i === CITY.beachCol) style = 'sand';
-      else if ((i === 6 && j === 5) || random() < 0.12) style = 'park';
-      if (i === 2 && j === 9) style = 'arena';
-      blockStyles.push(style);
+  function roadPoint(column, row) {
+    return { x: column * WORLD.pitch + WORLD.road / 2, y: row * WORLD.pitch + WORLD.road / 2 };
+  }
 
-      if (style === 'buildings') {
-        for (const rect of splitShapes(random, x, y, BLOCK_SIZE)) {
-          const building = makeBuilding(random, x + rect[0], y + rect[1], rect[2], rect[3], districtAt(x, y));
-          buildings.push(building);
-          if (random() < 0.10 || buildings.length % 6 === 0) {
-            building.shop = true;
-            const door = { x: building.x + building.w / 2, y: building.y + building.h + 15, cooldown: 0 };
-            shops.push(door);
-          }
+  function lotPoint(column, row) {
+    return {
+      x: column * WORLD.pitch + WORLD.road + 10,
+      y: row * WORLD.pitch + WORLD.road + 10,
+      w: WORLD.pitch - WORLD.road - 20,
+      h: WORLD.pitch - WORLD.road - 20,
+    };
+  }
+
+  const landmarks = {
+    tito: { ...roadPoint(2, 3), label: 'TITO ALVAREZ' },
+    dana: { ...roadPoint(1, 7), label: 'DANA KESTREL' },
+    harbor: { ...roadPoint(1, 8), label: 'HARBOR DOCKS' },
+    villa: { ...roadPoint(10, 1), label: 'THE VILLA' },
+    precinct: { ...roadPoint(7, 6), label: 'SOLANA PRECINCT' },
+    garage: { ...roadPoint(4, 4), label: 'SUNNY GARAGE' },
+    shop1: { ...roadPoint(5, 2), label: 'PALM BOUTIQUE' },
+    shop2: { ...roadPoint(8, 3), label: 'COAST OUTFITTERS' },
+    shop3: { ...roadPoint(6, 8), label: 'BAY JEWELERS' },
+    cp1: { ...roadPoint(3, 3), label: 'CHECKPOINT 1' },
+    cp2: { ...roadPoint(6, 3), label: 'CHECKPOINT 2' },
+    cp3: { ...roadPoint(6, 5), label: 'CHECKPOINT 3' },
+    cp4: { ...roadPoint(3, 5), label: 'CHECKPOINT 4' },
+    cp5: { ...roadPoint(3, 7), label: 'CHECKPOINT 5' },
+    race1: { ...roadPoint(9, 2), label: 'RACE GATE 1' },
+    race2: { ...roadPoint(11, 2), label: 'RACE GATE 2' },
+    race3: { ...roadPoint(11, 5), label: 'RACE GATE 3' },
+    race4: { ...roadPoint(8, 5), label: 'RACE GATE 4' },
+    escape: { ...roadPoint(1, 1), label: 'ESCAPE BOAT' },
+  };
+
+  const shops = ['shop1', 'shop2', 'shop3'];
+  const shopLot = { shop1: [5, 2], shop2: [8, 3], shop3: [6, 8] };
+
+  function addBuilding(entry, column, row) {
+    buildings.push(entry);
+    const key = `${column},${row}`;
+    let bucket = buildingGrid.get(key);
+    if (bucket === undefined) {
+      bucket = [];
+      buildingGrid.set(key, bucket);
+    }
+    bucket.push(entry);
+  }
+
+  for (let column = 0; column <= columns; column += 1) {
+    for (let row = 0; row <= rows; row += 1) {
+      const lot = lotPoint(column, row);
+      if (lot.x >= WORLD.width - 30 || lot.y >= WORLD.height - 30) continue;
+      const paletteIndex = randomInt(random, 0, PALETTE.building.length - 1);
+      const split = random() < 0.45;
+      if (split) {
+        const half = Math.floor(lot.w / 2) - 8;
+        for (let side = 0; side < 2; side += 1) {
+          const depth = randomBetween(random, lot.h * 0.55, lot.h * 0.94);
+          const entry = {
+            x: lot.x + side * (half + 16),
+            y: lot.y + (lot.h - depth) * random(),
+            w: half,
+            h: depth,
+            color: PALETTE.building[(paletteIndex + side) % PALETTE.building.length],
+            roof: PALETTE.roof[(paletteIndex + side) % PALETTE.roof.length],
+            floors: randomInt(random, 1, 4),
+            shop: null,
+          };
+          addBuilding(entry, column, row);
         }
-      } else if (style === 'park') {
-        for (let t = 0; t < 10; t += 1) {
-          trees.push({
-            x: x + 14 + random() * (BLOCK_SIZE - 28),
-            y: y + 14 + random() * (BLOCK_SIZE - 28),
-            r: 12 + random() * 9,
-            palm: i >= CITY.beachCol - 3 || random() < 0.28,
-          });
-        }
-      } else if (style === 'sand') {
-        for (let t = 0; t < 6; t += 1) {
-          trees.push({
-            x: x + 12 + random() * (BLOCK_SIZE - 24),
-            y: y + 12 + random() * (BLOCK_SIZE - 24),
-            r: 14 + random() * 8,
-            palm: true,
-          });
-        }
-      } else if (style === 'arena') {
-        const arena = makeBuilding(random, x, y, BLOCK_SIZE, BLOCK_SIZE, 'HARBORSIDE');
-        arena.top = 'plain';
-        arena.landmark = 'arena';
-        arena.color = '#f4d9a5';
-        buildings.push(arena);
-        landmarks.push({ type: 'arena', x: x + BLOCK_SIZE / 2, y: y + BLOCK_SIZE / 2, label: 'SOLAR ARENA' });
+      } else {
+        const entry = {
+          x: lot.x,
+          y: lot.y,
+          w: lot.w,
+          h: randomBetween(random, lot.h * 0.6, lot.h * 0.95),
+          color: PALETTE.building[paletteIndex],
+          roof: PALETTE.roof[paletteIndex],
+          floors: randomInt(random, 1, 5),
+          shop: null,
+        };
+        addBuilding(entry, column, row);
+      }
+      for (let palm = 0; palm < randomInt(random, 1, 3); palm += 1) {
+        palms.push({
+          x: lot.x + random() * lot.w,
+          y: lot.y + randomBetween(random, 0.16, 0.95) * lot.h,
+          scale: randomBetween(random, 0.7, 1.25),
+        });
+      }
+      if (random() < 0.7) {
+        parked.push({
+          x: column * WORLD.pitch + WORLD.road + randomBetween(random, 10, WORLD.pitch - WORLD.road - 44),
+          y: row * WORLD.pitch + randomBetween(random, 8, WORLD.road - 8),
+          angle: 0,
+          color: pickOne(random, PALETTE.carColors),
+          model: randomInt(random, 0, 2),
+          stolen: false,
+        });
+      }
+      if (random() < 0.55) {
+        parked.push({
+          x: column * WORLD.pitch + randomBetween(random, 8, WORLD.road - 8),
+          y: row * WORLD.pitch + WORLD.road + randomBetween(random, 10, WORLD.pitch - WORLD.road - 44),
+          angle: Math.PI / 2,
+          color: pickOne(random, PALETTE.carColors),
+          model: randomInt(random, 0, 2),
+          stolen: false,
+        });
       }
     }
   }
 
-  const lighthouse = makeBuilding(random, CITY.beachCol * CITY.cell + BLOCK_INSET + 60, 2 * CITY.cell + BLOCK_INSET + 50, 58, 58, 'BOARDWALK');
-  lighthouse.landmark = 'lighthouse';
-  lighthouse.top = 'plain';
-  lighthouse.color = '#fff4df';
-  buildings.push(lighthouse);
-  landmarks.push({ type: 'lighthouse', x: lighthouse.x + 29, y: lighthouse.y + 29, label: 'SOLANA LIGHT' });
-
-  if (shops.length < 8) {
-    for (const building of buildings) {
-      if (building.landmark) continue;
-      building.shop = true;
-      shops.push({ x: building.x + building.w / 2, y: building.y + building.h + 15, cooldown: 0 });
-      if (shops.length >= 8) break;
+  for (const name of shops) {
+    const [column, row] = shopLot[name];
+    for (const entry of buildingGrid.get(`${column},${row}`) ?? []) {
+      entry.shop = name;
+      entry.color = '#ffe0a3';
+      entry.roof = '#d6a45c';
     }
   }
 
-  const spots = {
-    start: { x: 7 * CITY.cell, y: 6 * CITY.cell },
-    safehouse: { x: 8 * CITY.cell, y: 6 * CITY.cell },
-    garage: { x: 6 * CITY.cell, y: 6 * CITY.cell },
-    plaza: { x: 8 * CITY.cell, y: 4 * CITY.cell },
-    harbor: { x: 11 * CITY.cell, y: 9 * CITY.cell },
-    pier: { x: CITY.beachCol * CITY.cell + 170, y: 9 * CITY.cell },
-    boardwalk: { x: CITY.beachCol * CITY.cell, y: 6 * CITY.cell },
-  };
+  for (let index = 0; index < 46; index += 1) {
+    palms.push({
+      x: randomBetween(random, WORLD.coast + 18, WORLD.beach - 12),
+      y: randomBetween(random, 40, WORLD.height - 40),
+      scale: randomBetween(random, 0.85, 1.4),
+    });
+  }
 
-  const pier = {
-    x: (CITY.beachCol + 1) * CITY.cell - CITY.road / 2,
-    y: 9 * CITY.cell - 26,
-    w: CITY.cell * 1.7,
-    h: 52,
-  };
+  function isWater(x, y) {
+    return x < WORLD.coast || y < 0 || x > WORLD.width || y > WORLD.height;
+  }
+
+  function isRoad(x, y) {
+    if (isWater(x, y)) return false;
+    const column = x % WORLD.pitch;
+    const row = y % WORLD.pitch;
+    return column < WORLD.road || row < WORLD.road;
+  }
+
+  function nearbyBuildings(x, y) {
+    const column = Math.floor(x / WORLD.pitch);
+    const row = Math.floor(y / WORLD.pitch);
+    const found = [];
+    for (let dx = -1; dx <= 1; dx += 1) {
+      for (let dy = -1; dy <= 1; dy += 1) {
+        const bucket = buildingGrid.get(`${column + dx},${row + dy}`);
+        if (bucket !== undefined) found.push(...bucket);
+      }
+    }
+    return found;
+  }
+
+  function blockedAt(x, y, radius) {
+    if (isWater(x, y) || x > WORLD.width - radius || y > WORLD.height - radius) return true;
+    const list = nearbyBuildings(x, y);
+    for (let index = 0; index < list.length; index += 1) {
+      const box = list[index];
+      const nearX = Math.max(box.x, Math.min(x, box.x + box.w));
+      const nearY = Math.max(box.y, Math.min(y, box.y + box.h));
+      const dx = x - nearX;
+      const dy = y - nearY;
+      if (dx * dx + dy * dy < radius * radius) return true;
+    }
+    return false;
+  }
+
+  function slideMove(x, y, dx, dy, radius) {
+    let hit = false;
+    let nextX = x + dx;
+    if (blockedAt(nextX, y, radius)) {
+      nextX = x;
+      hit = true;
+    }
+    let nextY = y + dy;
+    if (blockedAt(nextX, nextY, radius)) {
+      nextY = y;
+      hit = true;
+    }
+    return { x: nextX, y: nextY, hit };
+  }
+
+  function nearestRoad(x, y) {
+    const column = Math.round(x / WORLD.pitch);
+    const row = Math.round(y / WORLD.pitch);
+    const horizontal = roadPoint(column, Math.floor(y / WORLD.pitch));
+    const vertical = roadPoint(Math.floor(x / WORLD.pitch), row);
+    const distanceHorizontal = Math.abs(y - horizontal.y);
+    const distanceVertical = Math.abs(x - vertical.x);
+    return distanceHorizontal < distanceVertical
+      ? { x: Math.max(WORLD.coast + WORLD.road, x), y: horizontal.y, vertical: false }
+      : { x: vertical.x, y: Math.max(WORLD.coast + WORLD.road, y), vertical: true };
+  }
+
+  function findLandmark(name) {
+    return landmarks[name] ?? roadPoint(2, 3);
+  }
 
   return {
-    buildings, trees, shops, blockStyles, landmarks, spots, pier,
-    districtAt,
-    width: CITY_WIDTH,
-    height: CITY_HEIGHT,
+    columns,
+    rows,
+    buildings,
+    palms,
+    parked,
+    landmarks,
+    roadPoint,
+    lotPoint,
+    isWater,
+    isRoad,
+    blockedAt,
+    slideMove,
+    nearestRoad,
+    findLandmark,
+    nearbyBuildings,
+    carRadius: CAR.width * 0.62,
   };
 }
