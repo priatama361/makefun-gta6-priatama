@@ -1,5 +1,11 @@
 # Solana Bay — Sunny Side Up
 
+[![make.fun gta6-01](https://make.fun/badge/gta6-01.svg)](https://make.fun/bounty/gta6-01)
+[![rank](https://make.fun/badge/gta6-01/priatama361/makefun-gta6-priatama/rank.svg)](https://make.fun/bounty/gta6-01/leaderboard)
+[![reward](https://make.fun/badge/gta6-01/priatama361/makefun-gta6-priatama/reward.svg)](https://make.fun/bounty/gta6-01)
+
+[Bounty on make.fun](https://make.fun/bounty/gta6-01)
+
 A browser-playable, sun-soaked open-world crime story built from local static files only.
 
 You play **Mara "Sunny" Vega**, a getaway driver back on the Sun Coast. Work through an
