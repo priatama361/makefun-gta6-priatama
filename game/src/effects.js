@@ -1,81 +1,124 @@
+// Short-lived visual feedback: dust, sparks, muzzle flashes, damage puffs, floating money text and
+// camera shake. The effect pool is fixed so a long session never grows memory.
 import { PALETTE } from './config.js';
-import { randomBetween } from './random.js';
+import { clamp } from './random.js';
 
+const MAX_PARTICLES = 260;
+const MAX_MESSAGES = 14;
+
+/** Create an effect system with preallocated particle and message arrays. */
 export function createEffects(random) {
   const particles = [];
   const messages = [];
-  const state = { shake: 0, flash: 0, flashColor: PALETTE.gold };
-
-  function reset() {
-    particles.length = 0;
-    messages.length = 0;
-    state.shake = 0;
-    state.flash = 0;
+  for (let index = 0; index < MAX_PARTICLES; index += 1) {
+    particles.push({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, size: 3, color: '#fff', drag: 0.9 });
   }
+  for (let index = 0; index < MAX_MESSAGES; index += 1) {
+    messages.push({ active: false, x: 0, y: 0, text: '', life: 0, max: 1, color: '#fff', size: 20 });
+  }
+  let shake = 0;
+  let flash = 0;
 
-  function burst(x, y, color, count, speed = 160, life = 0.55) {
+  function burst(x, y, count, color, speed = 160, size = 4) {
     for (let index = 0; index < count; index += 1) {
-      const angle = random() * Math.PI * 2;
-      const velocity = randomBetween(random, speed * 0.25, speed);
-      particles.push({
-        x,
-        y,
-        vx: Math.cos(angle) * velocity,
-        vy: Math.sin(angle) * velocity,
-        life: randomBetween(random, life * 0.5, life),
-        maxLife: life,
-        size: randomBetween(random, 2, 6),
-        color,
-      });
+      const particle = particles.find((item) => !item.active);
+      if (!particle) return;
+      const angle = random.range(0, Math.PI * 2);
+      const power = random.range(speed * 0.25, speed);
+      particle.active = true;
+      particle.x = x;
+      particle.y = y;
+      particle.vx = Math.cos(angle) * power;
+      particle.vy = Math.sin(angle) * power;
+      particle.max = random.range(0.28, 0.7);
+      particle.life = particle.max;
+      particle.size = random.range(size * 0.6, size * 1.5);
+      particle.color = color;
+      particle.drag = 0.9;
     }
-    if (particles.length > 420) particles.splice(0, particles.length - 420);
   }
 
-  function puff(x, y, color, count = 5) {
-    burst(x, y, color, count, 55, 0.7);
+  function muzzle(x, y, angle) {
+    burst(x + Math.cos(angle) * 22, y + Math.sin(angle) * 22, 5, PALETTE.bullet, 110, 3);
+    flash = Math.max(flash, 0.06);
   }
 
-  function message(x, y, label, color = PALETTE.gold) {
-    messages.push({ x, y, label, color, life: 1.35 });
-    if (messages.length > 18) messages.shift();
+  function floatText(x, y, text, color = PALETTE.gold, size = 21) {
+    const message = messages.find((item) => !item.active);
+    if (!message) return;
+    message.active = true;
+    message.x = x;
+    message.y = y;
+    message.text = text;
+    message.color = color;
+    message.size = size;
+    message.max = 1.25;
+    message.life = message.max;
   }
 
-  function kick(amount, flashColor = null) {
-    state.shake = Math.min(18, state.shake + amount);
-    if (flashColor !== null) {
-      state.flash = Math.min(0.65, state.flash + 0.25);
-      state.flashColor = flashColor;
-    }
+  function addShake(amount) {
+    shake = Math.min(18, shake + amount);
   }
 
   function update(dt) {
-    for (let index = particles.length - 1; index >= 0; index -= 1) {
-      const particle = particles[index];
+    shake = Math.max(0, shake - dt * 34);
+    flash = Math.max(0, flash - dt);
+    for (const particle of particles) {
+      if (!particle.active) continue;
       particle.life -= dt;
+      if (particle.life <= 0) {
+        particle.active = false;
+        continue;
+      }
       particle.x += particle.vx * dt;
       particle.y += particle.vy * dt;
-      particle.vx *= 0.94;
-      particle.vy *= 0.94;
-      if (particle.life <= 0) particles.splice(index, 1);
+      particle.vx *= particle.drag;
+      particle.vy *= particle.drag;
     }
-    for (let index = messages.length - 1; index >= 0; index -= 1) {
-      const entry = messages[index];
-      entry.life -= dt;
-      entry.y -= 26 * dt;
-      if (entry.life <= 0) messages.splice(index, 1);
+    for (const message of messages) {
+      if (!message.active) continue;
+      message.life -= dt;
+      message.y -= 34 * dt;
+      if (message.life <= 0) message.active = false;
     }
-    state.shake = Math.max(0, state.shake - dt * 34);
-    state.flash = Math.max(0, state.flash - dt * 1.8);
   }
 
-  function draw(context) {
+  function offset() {
+    return { x: random.range(-shake, shake), y: random.range(-shake, shake), flash };
+  }
+
+  function draw(ctx) {
     for (const particle of particles) {
-      context.globalAlpha = Math.max(0, particle.life / particle.maxLife);
-      context.fillStyle = particle.color;
-      context.fillRect(particle.x - particle.size / 2, particle.y - particle.size / 2, particle.size, particle.size);
+      if (!particle.active) continue;
+      const alpha = clamp(particle.life / particle.max, 0, 1);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = particle.color;
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.size * alpha, 0, Math.PI * 2);
+      ctx.fill();
     }
-    context.globalAlpha = 1;
+    ctx.globalAlpha = 1;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const message of messages) {
+      if (!message.active) continue;
+      ctx.globalAlpha = clamp(message.life / message.max, 0, 1);
+      ctx.font = `800 ${message.size}px system-ui, sans-serif`;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(20,28,44,0.85)';
+      ctx.strokeText(message.text, message.x, message.y);
+      ctx.fillStyle = message.color;
+      ctx.fillText(message.text, message.x, message.y);
+    }
+    ctx.globalAlpha = 1;
   }
 
-  return { state, particles, messages, reset, burst, puff, message, kick, update, draw };
+  function clear() {
+    for (const particle of particles) particle.active = false;
+    for (const message of messages) message.active = false;
+    shake = 0;
+    flash = 0;
+  }
+
+  return { burst, muzzle, floatText, addShake, update, offset, draw, clear };
 }

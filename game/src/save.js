@@ -1,43 +1,42 @@
+// Browser-local progression. Saving is best effort: a private window can refuse localStorage and
+// the game simply continues with the current session's progress.
 import { SAVE_KEY } from './config.js';
 
-export function freshProgress() {
-  return { money: 350, reputation: 0, missionIndex: 0, completed: 0, bestRank: 0, seenIntro: false };
-}
-
+/** Read a saved run, returning a fresh default when nothing valid is stored. */
 export function loadProgress() {
-  const fallback = freshProgress();
+  const empty = { missionIndex: 0, money: 250, reputation: 0, stars: 0, completed: false, bestTime: 0 };
   try {
     const raw = window.localStorage.getItem(SAVE_KEY);
-    if (raw === null) return fallback;
-    const parsed = JSON.parse(raw);
-    if (parsed === null || typeof parsed !== 'object') return fallback;
+    if (!raw) return empty;
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== 'object') return empty;
     return {
-      money: Number.isFinite(parsed.money) ? Math.max(0, Math.floor(parsed.money)) : fallback.money,
-      reputation: Number.isFinite(parsed.reputation) ? Math.max(0, Math.floor(parsed.reputation)) : 0,
-      missionIndex: Number.isInteger(parsed.missionIndex) ? Math.max(0, Math.min(6, parsed.missionIndex)) : 0,
-      completed: Number.isFinite(parsed.completed) ? Math.max(0, Math.floor(parsed.completed)) : 0,
-      bestRank: Number.isFinite(parsed.bestRank) ? Math.max(0, Math.floor(parsed.bestRank)) : 0,
-      seenIntro: parsed.seenIntro === true,
+      missionIndex: Math.max(0, Math.min(6, Number(data.missionIndex) || 0)),
+      money: Math.max(0, Number(data.money) || 0),
+      reputation: Math.max(0, Number(data.reputation) || 0),
+      stars: Math.max(0, Number(data.stars) || 0),
+      completed: Boolean(data.completed),
+      bestTime: Math.max(0, Number(data.bestTime) || 0),
     };
   } catch {
-    return fallback;
+    return empty;
   }
 }
 
+/** Store the given run. */
 export function saveProgress(progress) {
   try {
     window.localStorage.setItem(SAVE_KEY, JSON.stringify(progress));
   } catch {
-    return false;
+    // Ignore disabled or full storage.
   }
-  return true;
 }
 
+/** Remove the saved run so the next start is a fresh STREET ROOKIE. */
 export function clearProgress() {
   try {
     window.localStorage.removeItem(SAVE_KEY);
   } catch {
-    return false;
+    // Ignore disabled storage.
   }
-  return true;
 }

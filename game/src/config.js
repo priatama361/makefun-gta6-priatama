@@ -1,117 +1,98 @@
+// SOLANA BAY - central tuning values. The playfield is a fixed 1280x720 logical area; the
+// renderer scales it to any window. All world sizes are in the same logical pixels.
 export const FIELD = { width: 1280, height: 720 };
 export const STEP = 1 / 60;
 
+// The city is a grid of roads on a sunlit peninsula. The sea starts at shoreX.
 export const WORLD = {
-  width: 4200,
-  height: 3100,
-  pitch: 340,
-  road: 66,
-  coast: 240,
-  beach: 400,
-  ocean: 120,
+  width: 3400,
+  height: 2200,
+  shoreX: 2520,
+  roadWidth: 132,
+  verticalRoads: [250, 750, 1250, 1750, 2250],
+  horizontalRoads: [250, 700, 1150, 1600, 2050],
 };
 
 export const PLAYER = {
-  radius: 13,
   walkSpeed: 205,
   sprintSpeed: 320,
+  radius: 15,
   maxHealth: 100,
   maxArmor: 100,
-  respawnDelay: 2.5,
-  interactRange: 74,
+  fireDelay: 0.14,
+  bulletSpeed: 1050,
+  bulletDamage: 27,
+  interactRange: 92,
 };
 
 export const CAR = {
-  length: 58,
-  width: 30,
-  engine: 760,
-  reverse: 300,
-  brake: 980,
-  friction: 300,
-  maxSpeed: 430,
-  maxReverse: 150,
-  steer: 2.7,
-  grip: 4.5,
-  collisionDamage: 7,
+  length: 76,
+  width: 38,
+  accel: 340,
+  brake: 520,
+  reverse: 170,
+  friction: 0.62,
+  steer: 2.5,
+  trafficSpeed: 105,
+  policeSpeed: 295,
+  rivalSpeed: 330,
+  maxHealth: 100,
 };
 
-export const TRAFFIC = { count: 26, minSpeed: 90, maxSpeed: 165, pedestrianCount: 52 };
-
-export const COMBAT = {
-  bulletSpeed: 900,
-  bulletLife: 1.15,
-  playerDamage: 26,
-  policeDamage: 9,
-  fireDelay: 0.13,
-  policeFireDelay: 1.3,
-  range: 620,
-  magazine: 12,
-  reloadTime: 1.1,
-  armorAbsorb: 0.65,
+export const POLICE = {
+  wantedPerStar: 100,
+  decayDelay: 16,
+  officerSpeed: 155,
+  officerHealth: 60,
+  spawnDelay: 4.5,
+  maxCars: 8,
+  maxOfficers: 10,
+  sight: 700,
+  range: 480,
 };
 
-export const WANTED = {
-  stars: 5,
-  decayTime: 13,
-  sightRange: 720,
-  policePerStar: 1,
-  starForShot: 0.055,
-  starForHit: 1.2,
-  starForCar: 0.8,
+export const MISSION = {
+  interactRange: 100,
+  checkpointRadius: 86,
+  raceRetry: 3,
+  shoppingSeconds: 95,
 };
 
-export const ECONOMY = {
-  takedownCash: 140,
-  pedestrianFine: -250,
-  missionBonusTime: 400,
-  healthPickup: 35,
-  armorPickup: 40,
-};
-
+// Warm daylight: sea blue, sand, cream stone, hot pink and sunset gold.
 export const PALETTE = {
-  sky: '#8ed8ef',
-  ocean: '#2fb6c6',
-  oceanDeep: '#1b8ba4',
-  foam: '#e6fdff',
-  sand: '#f2dda4',
-  sandDark: '#e2c98d',
-  ground: '#e9d9b6',
-  groundAlt: '#dfcb9e',
-  road: '#4b525b',
-  roadEdge: '#626a73',
-  roadLine: '#ffe4a1',
-  asphalt: '#565e66',
-  building: ['#f6c88a', '#ef9f86', '#f7df9c', '#d9b08c', '#e7a6a0', '#f3cf8b', '#bdd0b1', '#e8b784'],
-  roof: ['#c98f63', '#c97b70', '#cfb46f', '#ab845f', '#bd7f7c', '#c9a05d', '#8fa583', '#bd8b60'],
-  window: '#8fd3e8',
-  awning: '#e6614e',
-  palmTrunk: '#8b5a2b',
-  palmLeaf: '#2f8f59',
-  palmLeafLight: '#47ae6e',
-  carColors: ['#f25f5c', '#ffd166', '#4cc9f0', '#8ac926', '#ff9f1c', '#ef476f', '#6a4c93', '#f8f4e6', '#3a86ff', '#e0a458'],
-  police: '#20304a',
-  panel: '#0e1e28',
-  panelSoft: '#16303c',
-  text: '#fff8e7',
-  muted: '#bcd0d8',
-  gold: '#ffd45e',
-  accent: '#ff6b5e',
-  health: '#4ddb8d',
-  armor: '#5bb8ff',
-  danger: '#ff5252',
-  shadow: 'rgba(28, 38, 40, 0.24)',
+  sea: '#1ba9c9',
+  seaDeep: '#087ea6',
+  seaFoam: '#bff4f4',
+  sand: '#f4d9a4',
+  sandDark: '#dfbd83',
+  land: '#f6e7c6',
+  road: '#5c6672',
+  roadLight: '#6d7884',
+  sidewalk: '#d8c9a9',
+  lane: '#ffe6a8',
+  shadow: 'rgba(63,43,34,0.28)',
+  building: ['#f7b58b', '#f4cf94', '#ef9e86', '#f9ddb0', '#e9ad9b', '#f6c587'],
+  roof: ['#d98467', '#d9b16c', '#cf7d6d', '#e2bb7f', '#c88875', '#e0a96d'],
+  park: '#8fbf6a',
+  palm: '#2f8c5b',
+  palmDark: '#1f6546',
+  trunk: '#9c6b42',
+  player: '#ffd23f',
+  playerDark: '#d94f3d',
+  police: '#243b63',
+  policeBlue: '#2f7ff0',
+  policeRed: '#ff4f5e',
+  bullet: '#fff3b0',
+  hudPanel: 'rgba(24,32,48,0.86)',
+  hudPanelLight: 'rgba(31,42,61,0.78)',
+  hudLine: 'rgba(255,231,176,0.35)',
+  text: '#fffaf0',
+  muted: '#c9d4e2',
+  gold: '#ffd23f',
+  green: '#69df9a',
+  red: '#ff6b6b',
+  cyan: '#7de8ff',
 };
 
 export const FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif';
-export const SAVE_KEY = 'solana-bay.progress.v1';
-
-export const RANKS = [
-  { name: 'STREET ROOKIE', rep: 0 },
-  { name: 'SUN COAST RUNNER', rep: 25 },
-  { name: 'BAY ENFORCER', rep: 60 },
-  { name: 'HARBOR KING', rep: 105 },
-  { name: 'SOLANA LEGEND', rep: 165 },
-  { name: 'KING OF SOLANA BAY', rep: 235 },
-];
-
-export const SHOT_SECONDS = { cover: 3, onfoot: 16, combat: 26, story: 9 };
+export const SAVE_KEY = 'solana-bay.save.v3';

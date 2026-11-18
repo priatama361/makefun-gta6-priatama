@@ -1,111 +1,76 @@
+// Keyboard and pointer input. Held keys are queried directly; one-shot presses are queued as flags
+// so a quick tap between two fixed steps is never lost or counted twice.
 export const ACTION_CONFIRM = 1;
 export const ACTION_PAUSE = 2;
-export const ACTION_VEHICLE = 4;
+export const ACTION_INTERACT = 4;
 export const ACTION_RESTART = 8;
-export const ACTION_MAP = 16;
 
-const MOVE_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD']);
-const CONFIRM_KEYS = new Set(['Space', 'Enter', 'NumpadEnter']);
-const PAUSE_KEYS = new Set(['KeyP', 'Escape']);
-const VEHICLE_KEYS = new Set(['KeyE', 'KeyF']);
-const RESTART_KEYS = new Set(['KeyR']);
-const MAP_KEYS = new Set(['KeyM', 'Tab']);
-const FIRE_KEYS = new Set(['Space']);
+const PREVENT = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab']);
 
-export function createInput(target) {
+/** Attach listeners and return a compact input snapshot API. */
+export function createInput(canvas) {
   const held = new Set();
-  const actions = { value: 0 };
-  const pointer = { x: 640, y: 360 };
-  let firing = false;
-  let virtual = null;
-
-  function queue(code) {
-    if (CONFIRM_KEYS.has(code)) actions.value |= ACTION_CONFIRM;
-    if (PAUSE_KEYS.has(code)) actions.value |= ACTION_PAUSE;
-    if (VEHICLE_KEYS.has(code)) actions.value |= ACTION_VEHICLE;
-    if (RESTART_KEYS.has(code)) actions.value |= ACTION_RESTART;
-    if (MAP_KEYS.has(code)) actions.value |= ACTION_MAP;
-  }
+  let actions = 0;
+  let pointerDown = false;
+  let pointerClientX = window.innerWidth * 0.7;
+  let pointerClientY = window.innerHeight * 0.4;
 
   window.addEventListener('keydown', (event) => {
-    if (MOVE_KEYS.has(codeOf(event)) || CONFIRM_KEYS.has(codeOf(event)) || VEHICLE_KEYS.has(codeOf(event)) || PAUSE_KEYS.has(codeOf(event)) || RESTART_KEYS.has(codeOf(event)) || MAP_KEYS.has(codeOf(event))) {
-      event.preventDefault();
+    if (PREVENT.has(event.code)) event.preventDefault();
+    if (!held.has(event.code)) {
+      if (event.code === 'Enter' || event.code === 'NumpadEnter') actions |= ACTION_CONFIRM;
+      else if (event.code === 'KeyP' || event.code === 'Escape') actions |= ACTION_PAUSE;
+      else if (event.code === 'KeyE' || event.code === 'KeyF') actions |= ACTION_INTERACT;
+      else if (event.code === 'KeyR') actions |= ACTION_RESTART;
     }
-    const code = codeOf(event);
-    held.add(code);
-    if (!event.repeat) queue(code);
+    held.add(event.code);
   });
 
-  window.addEventListener('keyup', (event) => {
-    held.delete(codeOf(event));
-  });
+  window.addEventListener('keyup', (event) => held.delete(event.code));
 
   window.addEventListener('blur', () => {
     held.clear();
-    firing = false;
+    pointerDown = false;
   });
 
-  target.addEventListener('pointermove', (event) => {
-    const bounds = target.getBoundingClientRect();
-    pointer.x = event.clientX - bounds.left;
-    pointer.y = event.clientY - bounds.top;
-  });
-
-  target.addEventListener('pointerdown', (event) => {
-    const bounds = target.getBoundingClientRect();
-    pointer.x = event.clientX - bounds.left;
-    pointer.y = event.clientY - bounds.top;
-    firing = true;
-    actions.value |= ACTION_CONFIRM;
-    event.preventDefault();
+  canvas.addEventListener('pointerdown', (event) => {
+    pointerDown = true;
+    pointerClientX = event.clientX;
+    pointerClientY = event.clientY;
+    actions |= ACTION_CONFIRM;
+    canvas.setPointerCapture?.(event.pointerId);
   });
 
   window.addEventListener('pointerup', () => {
-    firing = false;
+    pointerDown = false;
   });
 
-  target.addEventListener('contextmenu', (event) => event.preventDefault());
-
-  function codeOf(event) {
-    return event.code ?? '';
-  }
-
-  function key(...codes) {
-    for (const code of codes) if (held.has(code)) return true;
-    return false;
-  }
-
-  function axis() {
-    if (virtual !== null) return { x: virtual.x, y: virtual.y };
-    return {
-      x: (key('KeyD', 'ArrowRight') ? 1 : 0) - (key('KeyA', 'ArrowLeft') ? 1 : 0),
-      y: (key('KeyS', 'ArrowDown') ? 1 : 0) - (key('KeyW', 'ArrowUp') ? 1 : 0),
-    };
-  }
+  window.addEventListener('pointermove', (event) => {
+    pointerClientX = event.clientX;
+    pointerClientY = event.clientY;
+  });
 
   return {
-    axis,
-    pointer,
-    sprinting() {
-      return virtual !== null ? virtual.sprint === true : key('ShiftLeft', 'ShiftRight');
+    down(code) { return held.has(code); },
+    axisX() {
+      return (held.has('KeyD') || held.has('ArrowRight') ? 1 : 0) - (held.has('KeyA') || held.has('ArrowLeft') ? 1 : 0);
     },
-    firing() {
-      return virtual !== null ? virtual.fire === true : firing || key(...FIRE_KEYS);
+    axisY() {
+      return (held.has('KeyS') || held.has('ArrowDown') ? 1 : 0) - (held.has('KeyW') || held.has('ArrowUp') ? 1 : 0);
     },
+    firing() { return pointerDown || held.has('Space'); },
+    handbrake() { return held.has('Space') && !pointerDown; },
+    sprinting() { return held.has('ShiftLeft') || held.has('ShiftRight'); },
+    pointer() { return { x: pointerClientX, y: pointerClientY }; },
     takeActions() {
-      const taken = virtual !== null ? virtual.actions : actions.value;
-      if (virtual === null) actions.value = 0;
+      const taken = actions;
+      actions = 0;
       return taken;
     },
-    setVirtual(next) {
-      virtual = next;
-    },
-    releaseVirtual() {
-      virtual = null;
-    },
-    aimAt(x, y) {
-      pointer.x = x;
-      pointer.y = y;
+    clear() {
+      held.clear();
+      actions = 0;
+      pointerDown = false;
     },
   };
 }

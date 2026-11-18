@@ -1,11 +1,15 @@
-import { STEP } from './config.js';
+// Boot and the main loop. Input is sampled every frame; the simulation advances in fixed 1/60 s
+// steps and the renderer paints whatever state exists. Screens are title, play, paused, game over
+// and victory. ?shot=cover|onfoot|combat|story stages a scene for the capture script.
+import { FIELD, STEP } from './config.js';
 import { createRandom } from './random.js';
 import { createCity } from './city.js';
-import { createWorld, EVENT_GAME_OVER, EVENT_MISSION_DONE, EVENT_OBJECTIVE } from './world.js';
-import { createRenderer, SCREEN_BRIEF, SCREEN_INTERMISSION, SCREEN_OVER, SCREEN_PAUSED, SCREEN_PLAY, SCREEN_TITLE, SCREEN_WIN } from './render.js';
-import { ACTION_CONFIRM, ACTION_MAP, ACTION_PAUSE, ACTION_RESTART, ACTION_VEHICLE, createInput } from './input.js';
+import { createEffects } from './effects.js';
+import { createWorld, EVENT_CASH, EVENT_CRASH, EVENT_HIT, EVENT_MISSION, EVENT_OVER, EVENT_SIREN, EVENT_SHOT } from './world.js';
+import { createInput, ACTION_CONFIRM, ACTION_INTERACT, ACTION_PAUSE, ACTION_RESTART } from './input.js';
 import { createAudio } from './audio.js';
-import { clearProgress, freshProgress, loadProgress, saveProgress } from './save.js';
+import { clearProgress, loadProgress, saveProgress } from './save.js';
+import { createRenderer, SCREEN_OVER, SCREEN_PAUSED, SCREEN_PLAY, SCREEN_TITLE, SCREEN_VICTORY } from './render.js';
 import { stageShot } from './shots.js';
 
 const MAX_FRAME = 0.25;
@@ -16,176 +20,162 @@ const seed = Number.isInteger(seedValue) ? seedValue : Math.floor(Math.random() 
 
 const canvas = document.getElementById('game');
 const status = document.getElementById('status');
-const city = createCity(createRandom(seed ^ 0x51f0a7c3));
-const audio = createAudio();
-const world = createWorld(createRandom(seed ^ 0x1b873593), city, audio);
-const renderer = createRenderer(canvas, city);
+const random = createRandom(seed);
+const city = createCity(random);
+const effects = createEffects(random);
+const world = createWorld(random, city, effects);
+const renderer = createRenderer(canvas);
 const input = createInput(canvas);
+const audio = createAudio();
 
-function announce(message) {
-  status.textContent = message;
-}
+// A small read-only inspection hook: useful for checking a run in a browser console and for the
+// local smoke test. It never changes the rules or the rendering.
+window.__solana = {
+  state: world.state,
+  get screen() { return activeScreen; },
+  get seed() { return seed; },
+  world,
+};
 
+let activeScreen = shot ? 'shot' : SCREEN_TITLE;
+
+/** Save the fields that matter between visits. */
 function persist() {
   const state = world.state;
   saveProgress({
+    missionIndex: state.victory ? 6 : state.mission.index,
     money: state.money,
     reputation: state.reputation,
-    missionIndex: state.phase === 'intermission' ? state.missionIndex + 1 : state.missionIndex,
-    completed: Math.max(state.missionIndex, state.phase === 'intermission' ? state.missionIndex + 1 : 0),
-    bestRank: state.reputation,
-    seenIntro: true,
+    completed: state.victory,
+    bestTime: state.elapsed,
   });
 }
 
+/** Play the sound cues attached to world events and speak important changes. */
+function reactToEvents(events) {
+  if (events & EVENT_SHOT) audio.play('shot');
+  if (events & EVENT_SIREN) {
+    audio.play('siren');
+    status.textContent = 'Police response!';
+  }
+  if (events & (EVENT_HIT | EVENT_CRASH)) audio.play(events & EVENT_CRASH ? 'crash' : 'hit');
+  if (events & EVENT_CASH) audio.play('cash');
+  if (events & EVENT_MISSION) {
+    audio.play('mission');
+    status.textContent = `Job complete. ${world.state.money} dollars, ${world.state.reputation} reputation.`;
+  }
+  if (events & EVENT_OVER) status.textContent = 'Game over. Press R to restart.';
+  if (events & (EVENT_CASH | EVENT_MISSION | EVENT_OVER)) persist();
+}
+
+/** Build the control snapshot one simulation step needs. */
+function controlSnapshot() {
+  const pointer = renderer.toField(input.pointer().x, input.pointer().y);
+  const camera = world.state.camera;
+  return {
+    axisX: input.axisX(),
+    axisY: input.axisY(),
+    firing: input.firing(),
+    handbrake: input.handbrake(),
+    sprinting: input.sprinting(),
+    actions: input.takeActions(),
+    aim: { x: pointer.x - FIELD.width / 2 + camera.x, y: pointer.y - FIELD.height / 2 + camera.y },
+  };
+}
+
+/** Paint a staged scene without advancing the world. */
 function runShot(name) {
-  const scene = stageShot(name, world, city);
+  const scene = stageShot(name, world, effects);
   let frames = 0;
   function paint() {
-    renderer.draw(world.state, scene.screen, world);
     frames += 1;
+    renderer.draw(world.state, scene.screen, {
+      effects,
+      targets: world.targets(),
+      objective: world.objectiveText(),
+      time: scene.time + frames / 60,
+      showPrompt: name !== 'story',
+    });
     if (frames < 2) requestAnimationFrame(paint);
     else window.__shotReady = true;
   }
   requestAnimationFrame(paint);
 }
 
+/** The playable game loop. */
 function runGame() {
   let screen = SCREEN_TITLE;
-  let progress = loadProgress();
   let accumulator = 0;
-  let saveTimer = 0;
   let last = performance.now();
-  world.reset(progress);
 
-  function beginRun() {
-    audio.unlock();
-    progress = loadProgress();
-    world.reset(progress);
-    renderer.resetCamera();
-    screen = world.state.phase === 'brief' ? SCREEN_BRIEF : world.state.phase === 'won' ? SCREEN_WIN : SCREEN_PLAY;
-    announce(`Solana Bay. ${world.objectiveText()}.`);
+  function begin(fresh) {
+    if (fresh) clearProgress();
+    world.reset(fresh ? null : loadProgress());
+    accumulator = 0;
+    screen = world.state.victory ? SCREEN_VICTORY : SCREEN_PLAY;
+    audio.resume();
+    audio.play('enter');
+    status.textContent = 'Playing Solana Bay.';
   }
 
-  function handleActions() {
-    const actions = input.takeActions();
-    if (screen === SCREEN_TITLE) {
-      if (actions & ACTION_CONFIRM) beginRun();
-    } else if (screen === SCREEN_BRIEF) {
-      if (actions & ACTION_CONFIRM) {
-        world.startMission(world.state.missionIndex);
-        screen = SCREEN_PLAY;
-        persist();
-        announce(`Accepted ${world.state.mission.title}. ${world.objectiveText()}.`);
-      }
-    } else if (screen === SCREEN_PLAY) {
-      if (actions & ACTION_PAUSE) {
-        screen = SCREEN_PAUSED;
-        announce('Paused.');
-      } else if (actions & ACTION_VEHICLE && world.toggleVehicle()) {
-        announce(world.state.player.car === null ? 'On foot.' : 'Driving.');
-      } else if (actions & ACTION_MAP) {
-        announce(`${world.objectiveText()}. Cash ${world.state.money}. Reputation ${world.state.reputation}.`);
-      }
-    } else if (screen === SCREEN_PAUSED) {
-      if (actions & (ACTION_PAUSE | ACTION_CONFIRM)) {
-        screen = SCREEN_PLAY;
-        announce('Playing.');
-      }
-    } else if (screen === SCREEN_INTERMISSION) {
-      if (actions & ACTION_CONFIRM) {
-        world.finishIntermission();
-        persist();
-        screen = world.state.phase === 'won' ? SCREEN_WIN : SCREEN_BRIEF;
-        announce(world.state.phase === 'won' ? 'King of Solana Bay.' : `Next job: ${world.state.mission.title}.`);
-      }
-    } else if (screen === SCREEN_OVER) {
-      if (actions & (ACTION_CONFIRM | ACTION_RESTART)) {
-        world.respawn();
-        renderer.resetCamera();
-        screen = SCREEN_PLAY;
-        announce(`Respawned. ${world.objectiveText()}.`);
-      }
-    } else if (screen === SCREEN_WIN) {
-      if (actions & ACTION_CONFIRM) {
-        clearProgress();
-        progress = freshProgress();
-        world.reset(progress);
-        screen = SCREEN_TITLE;
-        announce('New run ready. Press Enter to start.');
-      }
-    }
-  }
-
-  function simulate(dt) {
-    const aim = renderer.aimWorld(input.pointer);
-    const events = world.step(dt, {
-      axis: input.axis(),
-      aimX: aim.x,
-      aimY: aim.y,
-      firing: input.firing(),
-      sprint: input.sprinting(),
-    });
-    if (events & EVENT_MISSION_DONE) {
-      persist();
-      screen = SCREEN_INTERMISSION;
-      announce(`${world.state.mission.title} complete.`);
-    } else if (events & EVENT_GAME_OVER) {
-      persist();
-      screen = SCREEN_OVER;
-      announce('Busted. Press R to respawn.');
-    } else if (events & EVENT_OBJECTIVE) {
-      announce(world.objectiveText());
-    }
+  function handleActions(actions) {
+    if (actions & ACTION_CONFIRM && screen === SCREEN_TITLE) begin(false);
+    else if (actions & ACTION_CONFIRM && (screen === SCREEN_OVER || screen === SCREEN_VICTORY)) begin(true);
+    else if (actions & ACTION_CONFIRM && screen === SCREEN_PAUSED) {
+      screen = SCREEN_PLAY;
+      status.textContent = 'Playing.';
+    } else if (actions & ACTION_PAUSE && screen === SCREEN_PLAY) {
+      screen = SCREEN_PAUSED;
+      status.textContent = 'Paused.';
+    } else if (actions & ACTION_PAUSE && screen === SCREEN_PAUSED) {
+      screen = SCREEN_PLAY;
+      status.textContent = 'Playing.';
+    } else if (actions & ACTION_RESTART && screen !== SCREEN_TITLE) begin(true);
   }
 
   function frame(now) {
     requestAnimationFrame(frame);
     accumulator += Math.min((now - last) / 1000, MAX_FRAME);
     last = now;
-    handleActions();
+    const controls = controlSnapshot();
+    handleActions(controls.actions);
+    activeScreen = screen;
     if (screen === SCREEN_PLAY) {
-      while (accumulator >= STEP && screen === SCREEN_PLAY) {
-        simulate(STEP);
-        accumulator -= STEP;
-        saveTimer += STEP;
-        if (saveTimer >= 8) {
-          saveTimer = 0;
+      let steps = 0;
+      while (accumulator >= STEP && steps < 8 && screen === SCREEN_PLAY) {
+        const events = world.step(STEP, controls);
+        reactToEvents(events);
+        if (events & EVENT_OVER) screen = SCREEN_OVER;
+        if (world.state.victory) {
+          screen = SCREEN_VICTORY;
           persist();
         }
+        controls.actions = 0;
+        controls.firing = input.firing();
+        accumulator -= STEP;
+        steps += 1;
       }
+      audio.setEngine(world.state.player.car?.speed ?? 0, Boolean(world.state.player.inCar));
     } else {
       accumulator = 0;
-      if (screen === SCREEN_TITLE || screen === SCREEN_BRIEF) world.step(STEP * 0.35, { axis: { x: 0, y: 0 }, firing: false });
+      audio.setEngine(0, false);
     }
-    renderer.draw(world.state, screen, world);
+    renderer.draw(world.state, screen, {
+      effects,
+      targets: world.targets(),
+      objective: world.objectiveText(),
+      time: now / 1000,
+    });
   }
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && screen === SCREEN_PLAY) {
       screen = SCREEN_PAUSED;
-      persist();
-      announce('Paused.');
+      status.textContent = 'Paused.';
     }
   });
 
-  window.addEventListener('blur', () => {
-    if (screen === SCREEN_PLAY) {
-      screen = SCREEN_PAUSED;
-      persist();
-      announce('Paused.');
-    }
-  });
-
-  window.__solana = {
-    world,
-    city,
-    renderer,
-    getScreen: () => screen,
-    setScreen: (next) => { screen = next; },
-  };
-
-  announce('Solana Bay. Press Enter or click to start.');
+  status.textContent = 'Solana Bay. Press Enter or click to start.';
   requestAnimationFrame(frame);
 }
 

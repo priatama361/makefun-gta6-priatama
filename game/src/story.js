@@ -1,127 +1,111 @@
-import { RANKS } from './config.js';
+// The six-job story chain, the rank ladder and the small helpers that drive mission text.
+// Every contact, job and reward here is original to SOLANA BAY.
 
-export const CONTACTS = {
-  Tito: { name: 'TITO ALVAREZ', tag: 'TITO', color: '#ffd45e', job: 'wheelman' },
-  Dana: { name: 'DANA KESTREL', tag: 'DANA', color: '#4cc9f0', job: 'fixer' },
-};
+export const RANKS = [
+  { name: 'STREET ROOKIE', at: 0 },
+  { name: 'SUN COAST RUNNER', at: 30 },
+  { name: 'BAY ENFORCER', at: 70 },
+  { name: 'HARBOR KING', at: 120 },
+  { name: 'SOLANA LEGEND', at: 180 },
+  { name: 'KING OF SOLANA BAY', at: 250 },
+];
 
 export const MISSIONS = [
   {
     title: 'CHECKPOINTS',
-    contact: 'Tito',
-    brief: [
-      'Sunny, everybody wants the wheelman who can move.',
-      'Take a car and run the five painted markers across Solana Bay.',
-      'Stay off the sidewalk and keep it moving.',
-    ],
-    success: 'Clean run. Tito says you are the real thing.',
-    reward: { money: 1200, reputation: 24 },
-    objectives: [
-      { type: 'goto', place: 'cp1', label: 'Reach checkpoint 1', radius: 100, needVehicle: true },
-      { type: 'goto', place: 'cp2', label: 'Reach checkpoint 2', radius: 100, needVehicle: true },
-      { type: 'goto', place: 'cp3', label: 'Reach checkpoint 3', radius: 100, needVehicle: true },
-      { type: 'goto', place: 'cp4', label: 'Reach checkpoint 4', radius: 100, needVehicle: true },
-      { type: 'goto', place: 'cp5', label: 'Reach checkpoint 5', radius: 100, needVehicle: true },
-    ],
+    contact: 'TITO ALVAREZ',
+    brief: 'Sunny, Tito here. Take a set of wheels and hit three markers before the heat shows up. Keep it smooth.',
+    objective: 'Drive through all 3 checkpoint markers',
+    hint: 'Steal a parked car with E, then follow the gold rings.',
+    reward: 900,
+    reputation: 30,
+    kind: 'checkpoints',
   },
   {
     title: 'HARBOR HANDOFF',
-    contact: 'Dana',
-    brief: [
-      'A crate came in on the evening boat. Nobody saw it.',
-      'Collect it at the harbor docks, then bring it to me.',
-      'If the patrols get curious, do not stop.',
-    ],
-    success: 'Package delivered. Dana is smiling for once.',
-    reward: { money: 1800, reputation: 32 },
-    objectives: [
-      { type: 'goto', place: 'harbor', label: 'Collect the package at the harbor', radius: 125, needVehicle: true },
-      { type: 'goto', place: 'dana', label: 'Deliver the package to Dana', radius: 105, needVehicle: false },
-    ],
+    contact: 'DANA KESTREL',
+    brief: 'Dana. A crate came in on the evening boat. Pick it up at the harbor dock, then bring it to my market back room.',
+    objective: 'Collect the crate, then deliver it to the market',
+    hint: 'The dock is east of Palm Row. Press F at each marker.',
+    reward: 1400,
+    reputation: 40,
+    kind: 'handoff',
   },
   {
     title: 'POLICE TAKEDOWN',
-    contact: 'Tito',
-    brief: [
-      'They put a cruiser on your tail and called it a warning.',
-      'Take down three officers, then regroup at the garage.',
-      'Armor is in the trunk. Use it.',
-    ],
-    success: 'Three patrols down. The precinct will think twice.',
-    reward: { money: 2400, reputation: 42 },
-    objectives: [
-      { type: 'takedown', kind: 'police', count: 3, label: 'Take down police officers (0/3)' },
-      { type: 'goto', place: 'garage', label: 'Regroup at Sunny Garage', radius: 110, needVehicle: false },
-    ],
+    contact: 'TITO ALVAREZ',
+    brief: 'They crowded your mirror all last night. Take out three patrol cruisers and make the bay remember your name.',
+    objective: 'Destroy 3 police cruisers',
+    hint: 'Aim with the mouse and hold click or Space to fire.',
+    reward: 2200,
+    reputation: 50,
+    kind: 'takedown',
   },
   {
     title: 'SHOPPING SPREE',
-    contact: 'Dana',
-    brief: [
-      'The crew needs fresh threads before the big night.',
-      'Hit Palm Boutique, Coast Outfitters and Bay Jewelers.',
-      'Charge it to the house. Literally.',
-    ],
-    success: 'Three stops, no receipts. Dana calls it a masterpiece.',
-    reward: { money: 3000, reputation: 48 },
-    objectives: [
-      { type: 'goto', place: 'shop1', label: 'Visit Palm Boutique', radius: 100, needVehicle: false },
-      { type: 'goto', place: 'shop2', label: 'Visit Coast Outfitters', radius: 100, needVehicle: false },
-      { type: 'goto', place: 'shop3', label: 'Visit Bay Jewelers', radius: 100, needVehicle: false },
-    ],
+    contact: 'DANA KESTREL',
+    brief: 'Three boutiques, one list, ninety-five seconds. On foot, Sunny. No wheels, no excuses.',
+    objective: 'Visit all 3 boutiques before the timer runs out',
+    hint: 'Leave the car and press F at each pink storefront marker.',
+    reward: 2600,
+    reputation: 60,
+    kind: 'shopping',
   },
   {
     title: 'STREET RACE',
-    contact: 'Tito',
-    brief: [
-      'Rico thinks he owns the night road. He does not.',
-      'Follow the four race gates in order and leave him in the dust.',
-      'A fast car helps. So does not crashing.',
-    ],
-    success: 'Rico eats dust. Tito is already planning the next run.',
-    reward: { money: 3800, reputation: 58 },
-    objectives: [
-      { type: 'goto', place: 'race1', label: 'Pass race gate 1', radius: 105, needVehicle: true },
-      { type: 'goto', place: 'race2', label: 'Pass race gate 2', radius: 105, needVehicle: true },
-      { type: 'goto', place: 'race3', label: 'Pass race gate 3', radius: 105, needVehicle: true },
-      { type: 'goto', place: 'race4', label: 'Pass race gate 4', radius: 105, needVehicle: true },
-    ],
+    contact: 'TITO ALVAREZ',
+    brief: 'Rival crew is lining up on the South Strip. Four gates, one winner. Do not let them see your taillights.',
+    objective: 'Pass all 4 race gates before the rival',
+    hint: 'W throttle, A/D steer, Space handbrake through corners.',
+    reward: 3800,
+    reputation: 70,
+    kind: 'race',
   },
   {
     title: 'FINAL SCORE',
-    contact: 'Dana',
-    brief: [
-      'This is it. The villa, the crew, the whole bay.',
-      'Get to the villa, take down four guards, then reach the escape boat.',
-      'Come back in one piece, Sunny.',
-    ],
-    success: 'The score is yours. Solana Bay knows your name.',
-    reward: { money: 6000, reputation: 90 },
-    objectives: [
-      { type: 'goto', place: 'villa', label: 'Reach the villa', radius: 125, needVehicle: true },
-      { type: 'takedown', kind: 'guard', count: 4, label: 'Take down villa guards (0/4)' },
-      { type: 'goto', place: 'escape', label: 'Reach the escape boat', radius: 130, needVehicle: true },
-    ],
+    contact: 'DANA KESTREL',
+    brief: 'Last run. Clear the villa of Tito\'s guards, then get to the escape boat. After that, the bay is yours.',
+    objective: 'Clear 5 villa guards, then reach the escape boat',
+    hint: 'Body armor helps. The boat waits at the harbor dock.',
+    reward: 7500,
+    reputation: 100,
+    kind: 'final',
   },
 ];
 
-export function rankForReputation(reputation) {
-  let index = 0;
-  for (let position = 0; position < RANKS.length; position += 1) {
-    if (reputation >= RANKS[position].rep) index = position;
+/** The rank name for a reputation total. */
+export function rankFor(reputation) {
+  let name = RANKS[0].name;
+  for (const rank of RANKS) if (reputation >= rank.at) name = rank.name;
+  return name;
+}
+
+/** Progress toward the next rank, as a 0..1 number. */
+export function rankFraction(reputation) {
+  let current = RANKS[0];
+  let next = RANKS[1];
+  for (let index = 0; index < RANKS.length; index += 1) {
+    if (reputation >= RANKS[index].at) {
+      current = RANKS[index];
+      next = RANKS[index + 1] ?? current;
+    }
   }
-  return index;
+  if (next === current) return 1;
+  return Math.max(0, Math.min(1, (reputation - current.at) / (next.at - current.at)));
 }
 
-export function rankName(index) {
-  return RANKS[Math.max(0, Math.min(RANKS.length - 1, index))].name;
+/** A fresh mission progress record for a newly started job. */
+export function createMissionProgress() {
+  return { stage: 0, progress: 0, timer: 0, failed: false, flash: 0, rivalProgress: 0, baseline: 0 };
 }
 
-export function nextRankReputation(reputation) {
-  const index = rankForReputation(reputation);
-  return index + 1 < RANKS.length ? RANKS[index + 1].rep : null;
+/** The mission the player is currently working, or null after the final job. */
+export function currentMission(index) {
+  return MISSIONS[index] ?? null;
 }
 
-export function missionForIndex(index) {
-  return MISSIONS[Math.max(0, Math.min(MISSIONS.length - 1, index))];
+/** Format seconds as a compact mm:ss timer. */
+export function formatTime(seconds) {
+  const whole = Math.max(0, Math.floor(seconds));
+  return `${String(Math.floor(whole / 60)).padStart(2, '0')}:${String(whole % 60).padStart(2, '0')}`;
 }

@@ -1,41 +1,34 @@
+// A small seeded random number generator (mulberry32) plus a few helpers. The same seed always
+// produces the same city and the same traffic, which is what makes the staged scenes repeatable.
 export function createRandom(seed) {
-  let state = seed | 0;
-  return function random() {
-    state = (state + 0x6d2b79f5) | 0;
-    let mixed = Math.imul(state ^ (state >>> 15), 1 | state);
-    mixed = (mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed)) ^ mixed;
-    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
-  };
+  let a = seed | 0;
+  function random() {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  random.range = (low, high) => low + random() * (high - low);
+  random.int = (low, high) => Math.floor(random.range(low, high + 1));
+  random.pick = (list) => list[Math.floor(random() * list.length)];
+  random.chance = (probability) => random() < probability;
+  return random;
 }
 
-export function randomBetween(random, low, high) {
-  return low + random() * (high - low);
-}
-
-export function randomInt(random, low, high) {
-  return Math.floor(randomBetween(random, low, high + 1));
-}
-
-export function pickOne(random, values) {
-  return values[Math.floor(random() * values.length) % values.length];
-}
-
-export function distanceBetween(ax, ay, bx, by) {
-  const dx = bx - ax;
-  const dy = by - ay;
-  return Math.sqrt(dx * dx + dy * dy);
-}
-
-export function clampValue(value, low, high) {
+/** Clamp a number into an inclusive range. */
+export function clamp(value, low, high) {
   return value < low ? low : value > high ? high : value;
 }
 
-export function angleTowards(fromX, fromY, toX, toY) {
-  return Math.atan2(toY - fromY, toX - fromX);
+/** Straight-line distance between two points. */
+export function distance(ax, ay, bx, by) {
+  return Math.hypot(ax - bx, ay - by);
 }
 
-export function shortestAngle(from, to) {
-  let delta = (to - from + Math.PI) % (Math.PI * 2);
-  if (delta < 0) delta += Math.PI * 2;
-  return delta - Math.PI;
+/** Shortest signed angular difference, in radians. */
+export function angleDelta(from, to) {
+  let delta = (to - from) % (Math.PI * 2);
+  if (delta > Math.PI) delta -= Math.PI * 2;
+  if (delta < -Math.PI) delta += Math.PI * 2;
+  return delta;
 }

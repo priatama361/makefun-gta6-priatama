@@ -9,27 +9,29 @@ An original sun-soaked open-world crime game. You are Mara "Sunny" Vega, a getaw
 
 ## Play
 
-No build step: serve `game/` with any static file server, or run `node serve.ts` and open `http://localhost:8080`. Everything is local: plain ES modules, canvas, and Web Audio, with no network requests and no dependencies.
+No build step: run `node serve.ts --port 8080` and open `http://localhost:8080`. Everything is local: plain ES modules, canvas and Web Audio, with no network requests or dependencies.
 
 ## Controls
 
 | Key | Action |
 | --- | --- |
-| WASD / arrows | Walk, or drive (W throttle, S brake/reverse, A/D steer) |
+| WASD / arrows | Walk, sprint or drive (W throttle, S brake/reverse, A/D steer) |
 | Mouse | Aim |
-| Click / Space | Fire |
+| Click / Space | Fire (Space also works as a handbrake while driving) |
 | Shift | Sprint on foot |
 | E | Enter or leave a vehicle (steal parked cars) |
+| F | Interact with mission markers |
 | P / Esc | Pause |
-| Enter | Advance dialogue and accept jobs |
+| Enter | Start, advance, or resume |
+| R | Restart |
 
 ## The six jobs
 
-1. **Checkpoints** (Tito) — run the marked route through the city.
-2. **Harbor Handoff** (Dana) — collect the package at the harbor and deliver it.
-3. **Police Takedown** (Tito) — make the patrols answer for the chase.
-4. **Shopping Spree** (Dana) — hit every boutique on the list.
-5. **Street Race** (Tito) — beat the rival through the night route.
-6. **Final Score** — settle it at the villa and get away clean.
+1. **Checkpoints** (Tito) - run the marked route through the city.
+2. **Harbor Handoff** (Dana) - collect the crate at the harbor and deliver it to the market.
+3. **Police Takedown** (Tito) - destroy three patrol cruisers.
+4. **Shopping Spree** (Dana) - hit every boutique on the list before the clock runs out.
+5. **Street Race** (Tito) - beat the rival crew through four gates.
+6. **Final Score** - clear the villa guards and escape by boat.
 
-Each job pays cash and reputation. Reputation promotes you through STREET ROOKIE, SUN COAST RUNNER, BAY ENFORCER, HARBOR KING, SOLANA LEGEND and finally KING OF SOLANA BAY.
+Each job pays cash and reputation. Reputation promotes you through STREET ROOKIE, SUN COAST RUNNER, BAY ENFORCER, HARBOR KING, SOLANA LEGEND and KING OF SOLANA BAY.
