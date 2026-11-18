@@ -1,7 +1,11 @@
+// Keyboard and mouse state: held keys, one-shot presses and the pointer used
+// for aiming. Input is captured on the window so focus never gets stuck.
+
 const TRACKED = new Set([
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
-  'KeyA', 'KeyD', 'KeyW', 'KeyS', 'KeyE', 'KeyJ', 'KeyR', 'KeyQ', 'KeyM',
-  'KeyP', 'Escape', 'Space', 'Enter', 'ShiftLeft', 'ShiftRight', 'Mouse0',
+  'KeyA', 'KeyD', 'KeyW', 'KeyS', 'KeyE', 'KeyJ', 'KeyR', 'KeyQ',
+  'KeyM', 'KeyP', 'KeyN', 'Escape', 'Space', 'Enter',
+  'ShiftLeft', 'ShiftRight', 'Mouse0',
 ]);
 
 export function createInput(target) {

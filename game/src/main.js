@@ -1,8 +1,17 @@
-import { BEST_KEY, MUTE_KEY, STEP } from './config.js';
+// Thin browser boot: wire input, simulation, sound, rendering and saving, then
+// run a fixed-step loop. The URL's shot parameter renders a staged still.
+
+import { MUTE_KEY, STEP } from './config.js';
 import { createRandom } from './random.js';
-import { createWorld, EVENT_CASH, EVENT_CRASH, EVENT_HIT, EVENT_JOB, EVENT_OVER, EVENT_SHOT, EVENT_WANTED } from './world.js';
+import { createSave } from './save.js';
+import {
+  createWorld, EVENT_CASH, EVENT_CRASH, EVENT_ENTER, EVENT_EXIT, EVENT_HIT,
+  EVENT_OVER, EVENT_RANKUP, EVENT_SHOP, EVENT_SHOT, EVENT_STORY, EVENT_WANTED,
+} from './world.js';
 import { createInput } from './input.js';
-import { createRenderer, SCREEN_OVER, SCREEN_PAUSED, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
+import {
+  createRenderer, SCREEN_OVER, SCREEN_PAUSED, SCREEN_PLAY, SCREEN_TITLE,
+} from './render.js';
 import { createAudio } from './audio.js';
 import { stageShot } from './shots.js';
 
@@ -14,24 +23,40 @@ const seed = Number.isInteger(seedParam) ? seedParam : Math.floor(Math.random() 
 
 const canvas = document.getElementById('game');
 const status = document.getElementById('status');
-const world = createWorld(createRandom(seed));
+const save = createSave();
+const progress = save.load();
+const world = createWorld(createRandom(seed), progress);
 const renderer = createRenderer(canvas, world);
 const audio = createAudio();
 
-function storedNumber(key) {
+function storedMute() {
   try {
-    return Number.parseInt(window.localStorage.getItem(key) ?? '0', 10) || 0;
+    return window.localStorage.getItem(MUTE_KEY) === '1';
   } catch {
-    return 0;
+    return false;
   }
 }
 
-function store(key, value) {
+function storeMute(value) {
   try {
-    window.localStorage.setItem(key, String(value));
+    window.localStorage.setItem(MUTE_KEY, value ? '1' : '0');
   } catch {
-    return;
+    // Sound preference simply does not persist when storage is blocked.
   }
+}
+
+function persist() {
+  const p = world.state.progress;
+  const next = save.commit({
+    money: p.money,
+    rep: p.rep,
+    completed: p.completed,
+    earned: p.earned,
+    missionsDone: p.missionsDone,
+    best: Math.max(p.best, save.data().best),
+  });
+  world.state.stats.best = next.best;
+  return next;
 }
 
 function runShot(name) {
@@ -40,7 +65,7 @@ function runShot(name) {
   function paint() {
     renderer.draw(world.state, scene.screen, scene.best);
     painted += 1;
-    if (painted < 2) requestAnimationFrame(paint);
+    if (painted < 3) requestAnimationFrame(paint);
     else window.__shotReady = true;
   }
   requestAnimationFrame(paint);
@@ -49,12 +74,12 @@ function runShot(name) {
 function runGame() {
   const input = createInput(canvas);
   let screen = SCREEN_TITLE;
-  let best = storedNumber(BEST_KEY);
-  let muted = storedNumber(MUTE_KEY) === 1;
+  let best = save.data().best;
+  let muted = storedMute();
   let accumulator = 0;
+  let saveTimer = 0;
   let last = performance.now();
   audio.setMuted(muted);
-  world.state.stats.best = best;
 
   function announce(message) {
     status.textContent = message;
@@ -81,26 +106,26 @@ function runGame() {
   const idle = {
     moveX: 0, moveY: 0, sprint: false, fire: false, handbrake: false,
     interactHeld: false, interact: false, reload: false, switchWeapon: false,
-    aimX: world.state.player.x + 100, aimY: world.state.player.y,
+    aimX: world.state.player.x + 160, aimY: world.state.player.y,
   };
 
   function startGame() {
     audio.unlock();
     world.reset();
-    world.state.stats.best = best;
+    best = persist().best;
     accumulator = 0;
     screen = SCREEN_PLAY;
-    announce('Playing. Complete jobs, earn cash, lose the cops.');
+    announce('Playing Solana Bay. Drive to the marker and follow the story.');
   }
 
-  function endGame() {
-    screen = SCREEN_OVER;
-    if (world.state.stats.earned > best) {
-      best = world.state.stats.earned;
-      store(BEST_KEY, best);
-    }
-    world.state.stats.best = best;
-    announce(`Game over. Earned ${world.state.stats.earned}. Best ${best}.`);
+  function newStory() {
+    const blank = save.reset();
+    Object.assign(world.state.progress, blank);
+    world.state.rank.name = 'STREET ROOKIE';
+    world.reset();
+    best = blank.best;
+    screen = SCREEN_TITLE;
+    announce('New story started. Progress cleared.');
   }
 
   function react(events) {
@@ -111,29 +136,42 @@ function runGame() {
     }
     if (events & EVENT_CASH) audio.play('cash');
     if (events & EVENT_CRASH) audio.play('crash');
-    if (events & EVENT_JOB) {
-      audio.play('job');
-      announce(`Job complete. ${world.state.player.money} dollars.`);
-    }
+    if (events & EVENT_ENTER) audio.play('enter');
+    if (events & EVENT_EXIT) audio.play('enter');
+    if (events & EVENT_SHOP) audio.play('shop');
     if (events & EVENT_WANTED) audio.play('wanted');
+    if (events & EVENT_STORY) {
+      audio.play('story');
+      persist();
+      const job = world.state.mission;
+      announce(`Mission complete. Next: ${job.def.title}.`);
+    }
+    if (events & EVENT_RANKUP) {
+      audio.play('rankup');
+      announce(`Rank up: ${world.state.rank.name}.`);
+    }
     if (events & EVENT_OVER) {
       audio.play('over');
-      endGame();
+      persist();
+      screen = SCREEN_OVER;
+      announce('Busted. Press space to carry on from your last save.');
     }
   }
 
   function frame(now) {
     requestAnimationFrame(frame);
-    accumulator += Math.min((now - last) / 1000, MAX_FRAME);
+    const delta = Math.min((now - last) / 1000, MAX_FRAME);
+    accumulator += delta;
     last = now;
     const presses = input.takePresses();
 
     if (presses.has('KeyM')) {
       muted = !muted;
       audio.setMuted(muted);
-      store(MUTE_KEY, muted ? 1 : 0);
+      storeMute(muted);
       announce(muted ? 'Sound muted.' : 'Sound on.');
     }
+    if (presses.has('KeyN') && (screen === SCREEN_TITLE || screen === SCREEN_OVER)) newStory();
     if (presses.has('Space') || presses.has('Enter') || presses.has('Mouse0')) {
       if (screen === SCREEN_TITLE || screen === SCREEN_OVER) startGame();
       else if (screen === SCREEN_PAUSED) {
@@ -151,7 +189,7 @@ function runGame() {
     }
 
     if (screen === SCREEN_TITLE) {
-      idle.aimX = world.state.player.x + 120;
+      idle.aimX = world.state.player.x + 160;
       idle.aimY = world.state.player.y - 40;
       while (accumulator >= STEP) {
         world.step(STEP, idle, true);
@@ -163,9 +201,12 @@ function runGame() {
         react(world.step(STEP, controls));
         accumulator -= STEP;
       }
-    } else {
-      accumulator = 0;
-    }
+      saveTimer += delta;
+      if (saveTimer > 8) {
+        saveTimer = 0;
+        persist();
+      }
+    } else accumulator = 0;
 
     audio.setEngine(world.state.player.car ? Math.abs(world.state.player.car.speed) : 0, screen === SCREEN_PLAY && !!world.state.player.car);
     renderer.draw(world.state, screen, best);
@@ -177,8 +218,9 @@ function runGame() {
       announce('Paused.');
     }
   });
+  window.addEventListener('beforeunload', persist);
 
-  announce('Neon Shores. Press Space or click to start.');
+  announce('Solana Bay. Press Space to start, N on the title for a new story.');
   requestAnimationFrame(frame);
 }
 

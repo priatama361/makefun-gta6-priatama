@@ -1,8 +1,12 @@
-import { SCREEN_OVER, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
+// Deterministic staged game states for the four real browser captures. Each
+// scene calls the same world.stage() a live game uses, so no render is faked.
+
+import { SCREEN_PLAY } from './render.js';
+
+const BEST = { cover: 12450, onfoot: 2860, combat: 6420, story: 12680 };
 
 export function stageShot(name, world) {
-  world.stage(name);
-  if (name === 'play') return { screen: SCREEN_PLAY, best: 12400 };
-  if (name === 'end') return { screen: SCREEN_OVER, best: 12400 };
-  return { screen: SCREEN_TITLE, best: 12400 };
+  const scene = Object.hasOwn(BEST, name) ? name : 'cover';
+  world.stage(scene);
+  return { screen: SCREEN_PLAY, best: BEST[scene] };
 }

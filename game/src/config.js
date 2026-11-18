@@ -1,5 +1,8 @@
-export const FIELD = { width: 1280, height: 720 };
+// Tuning constants and the sun-soaked color language for Solana Bay.
+// Every gameplay number and every HUD color lives here so the rest of the game
+// stays small and each render module paints from the same bright palette.
 
+export const FIELD = { width: 1280, height: 720 };
 export const STEP = 1 / 60;
 
 export const CITY = {
@@ -15,92 +18,98 @@ export const CITY_HEIGHT = CITY.rows * CITY.cell;
 
 export const PLAYER = {
   radius: 14,
-  speed: 216,
-  sprint: 330,
+  speed: 226,
+  sprint: 342,
   health: 100,
   armor: 0,
-  interactRange: 84,
-  cash: 250,
+  interactRange: 92,
+  cash: 400,
 };
 
 export const WEAPONS = {
-  pistol: { name: 'PISTOL', damage: 30, rate: 0.2, magazine: 12, reserve: 72, speed: 940, spread: 0.018, reload: 1.1 },
-  smg: { name: 'SMG', damage: 17, rate: 0.085, magazine: 30, reserve: 180, speed: 1020, spread: 0.075, reload: 1.5 },
+  pistol: { name: 'PISTOL', damage: 32, rate: 0.18, magazine: 14, reserve: 84, speed: 980, spread: 0.016, reload: 1.0 },
+  smg: { name: 'SMG', damage: 18, rate: 0.08, magazine: 34, reserve: 204, speed: 1080, spread: 0.07, reload: 1.4 },
 };
 
 export const CAR_TYPES = [
-  { name: 'SEDAN', maxSpeed: 330, accel: 245, turn: 2.35, hp: 110, length: 74, width: 38 },
-  { name: 'COUPE', maxSpeed: 455, accel: 350, turn: 2.75, hp: 92, length: 78, width: 38 },
-  { name: 'TRUCK', maxSpeed: 285, accel: 205, turn: 1.9, hp: 170, length: 92, width: 44 },
+  { name: 'SEDAN', maxSpeed: 340, accel: 250, turn: 2.4, hp: 115, length: 76, width: 40 },
+  { name: 'COUPE', maxSpeed: 470, accel: 360, turn: 2.8, hp: 96, length: 80, width: 39 },
+  { name: 'TRUCK', maxSpeed: 290, accel: 210, turn: 1.9, hp: 190, length: 94, width: 46 },
 ];
 
 export const POLICE = {
-  maxSpeed: 400,
-  accel: 300,
-  turn: 2.6,
-  hp: 130,
-  length: 82,
-  width: 40,
-  fireRate: 1.25,
-  range: 520,
+  maxSpeed: 445,
+  accel: 330,
+  turn: 2.8,
+  hp: 145,
+  length: 84,
+  width: 41,
+  fireRate: 1.15,
+  range: 560,
 };
 
 export const WANTED = {
   max: 5,
-  cooldown: [13, 17, 22, 27, 33],
-  radius: 660,
-};
-
-export const MISSION = {
-  robberyHold: 1.6,
-  deliveryTime: 42,
-  raceTime: 36,
-  rewards: [900, 1400, 2000, 2800, 3800, 5000],
+  cooldown: [14, 18, 23, 29, 36],
+  radius: 700,
 };
 
 export const LIMITS = {
-  traffic: 34,
-  pedestrians: 62,
-  bullets: 180,
-  particles: 260,
+  traffic: 40,
+  pedestrians: 70,
+  bullets: 200,
+  particles: 320,
   copCars: 6,
-  pickups: 40,
+  pickups: 48,
 };
 
+export const CAR_COLORS = [
+  '#ef5a58', '#f4a63c', '#2fc4b6', '#f4f1e4', '#7d74d8',
+  '#3c9fe0', '#e8d9b0', '#79c65c', '#d76a9b', '#f27d52',
+];
+
 export const PALETTE = {
-  backdrop: '#0b0e15',
-  asphalt: '#212734',
-  asphaltLight: '#28303e',
-  sidewalk: '#465063',
-  curb: '#68748b',
-  paint: '#c8d2e0',
-  crosswalk: '#9aa6b9',
-  park: '#315e4a',
-  parkDark: '#244937',
-  tree: '#3f7d58',
-  treeLight: '#5a9b6c',
-  water: '#16445f',
-  waterLight: '#236681',
-  sand: '#d6bb80',
-  building: ['#4a5468', '#586078', '#3e475b', '#646c84', '#414b60', '#525d72', '#6a7289', '#454f65'],
-  roof: '#2b3242',
-  window: '#ffd88a',
-  windowDark: '#7d8aa1',
-  player: '#30e0d0',
-  playerDark: '#147f7a',
-  cop: '#2a3d63',
-  copBlue: '#4a9bff',
-  copRed: '#ff4d6d',
-  money: '#ffd257',
-  health: '#5ee08a',
-  armor: '#69a9ff',
-  text: '#f3f6fc',
-  muted: '#9faabf',
-  panel: 'rgba(12, 16, 26, 0.9)',
-  orange: '#ff9f45',
+  backdrop: '#bde8f4',
+  asphalt: '#d9d4c5',
+  asphaltShade: '#c8c1ae',
+  asphaltStripe: '#fff9e8',
+  sidewalk: '#f2e5c9',
+  curb: '#dcc59a',
+  crosswalk: '#fffdf0',
+  park: '#63b366',
+  parkPath: '#e9d9aa',
+  tree: '#2f8f50',
+  treeLight: '#58bd63',
+  palmTrunk: '#a97443',
+  palmLeaf: '#3aa85a',
+  water: '#29bdd7',
+  waterDeep: '#1599bd',
+  foam: '#eafbff',
+  sand: '#f3dca1',
+  sandDark: '#e3c480',
+  building: ['#f6cba9', '#f7d9a1', '#f2aaa2', '#cbe0b8', '#bfdaee', '#e6c8e9', '#f2e3b9', '#d9c5ee', '#f8b9a5', '#dfe9c8'],
+  roof: 'rgba(255,255,255,0.24)',
+  roofLine: 'rgba(120,105,85,0.20)',
+  window: '#5cbcdc',
+  windowWarm: '#ffe8a8',
+  player: '#ff5d4d',
+  playerDark: '#bb3a34',
+  cop: '#2457a6',
+  copBlue: '#388fff',
+  copRed: '#ff4f60',
+  money: '#ffd23e',
+  health: '#39cd78',
+  armor: '#3da8f2',
+  text: '#fffdf2',
+  muted: '#e9e3cc',
+  panel: 'rgba(16,30,44,0.90)',
+  panelLight: 'rgba(24,44,60,0.82)',
+  orange: '#ff9642',
+  shadow: 'rgba(48,46,34,0.22)',
+  ink: '#16232e',
 };
 
 export const FONT = '"Trebuchet MS", "Segoe UI", system-ui, sans-serif';
 
-export const BEST_KEY = 'neon-shores.best';
-export const MUTE_KEY = 'neon-shores.mute';
+export const SAVE_KEY = 'solana-bay.progress.v1';
+export const MUTE_KEY = 'solana-bay.mute.v1';
